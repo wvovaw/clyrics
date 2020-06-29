@@ -1,0 +1,19 @@
+{
+  "name": "clyrics",
+  "version": "0.0.1",
+  "description": "CLI tool to get any song lyrics ",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "wvovaw",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^7.3.1"
+  },
+  "dependencies": {
+    "cherio": "^1.0.0-rc.2",
+    "commander": "^5.1.0",
+    "request": "^2.88.2"
+  }
+}
