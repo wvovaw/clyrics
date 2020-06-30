@@ -1,5 +1,5 @@
 const request = require('request');
-const cherio = require('cherio');
+const cherio = require('cheerio');
 
 const getLyrics = async (artist, title) => {
   let url = 'https://genius.com/'
