@@ -6,6 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "bin": {
+    "clyrics": "./clyrics.js"
+  },
   "author": "wvovaw",
   "license": "MIT",
   "devDependencies": {
