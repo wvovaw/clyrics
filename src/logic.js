@@ -2,18 +2,33 @@ const request = require('request');
 const cherio = require('cheerio');
 
 // Returns lyrics for a concrete song
-const getLyricsMusixmatch = async (artist, title) => {
-  let url = 'https://musixmatch.com/lyrics/'
-    + encodeURI(artist.toLowerCase().trim().replace(/ /g, '-'))
-    + '/'
-    + encodeURI(title.toLowerCase().trim().replace(/ /g, '-'));
+const getLyricsMusixmatch = async (explicit_url, artist, title) => {
+  let url = 'https://musixmatch.com';
+  if(explicit_url !== '') { url += explicit_url; }
+  else {
+    url +=
+       '/lyrics/'
+      + encodeURI(artist.toLowerCase().trim().replace(/, /g, '-').replace(/\s+/g, '-').replace(/[^a-zA-Zа-яА-Я0-9- ]/g, ''))
+      + '/'
+      + encodeURI(title.toLowerCase().trim().replace(/[^a-zA-Zа-яА-Я0-9 ]/g, '').replace(/\s+/g, '-'));
+  }
+  console.log(url);
 
   let songPage = await new Promise((resolve, reject) => {
     request(url, (error, response, html) => {
       if(!error && response.statusCode == 200){
         const $ = cherio.load(html);
         let spans;
-        if($('.lyrics__content__warning')[0]) {
+        if($('.mxm-lyrics-not-available')[0]) {
+          const reason = $('.mxm-empty__title').text();
+          resolve('\nLyrics are unavaliable\n\tReason: ' + reason);
+        }
+        if($('.lyrics__content__error')[0]) {
+          console.log('Errors were found in the lyrics!');
+          spans = $('.lyrics__content__error');
+          console.log(spans.text());
+        } 
+        else if($('.lyrics__content__warning')[0]) {
           console.log('The lyrics are waiting for review!');
           spans = $('.lyrics__content__warning');
         } 
@@ -24,7 +39,7 @@ const getLyricsMusixmatch = async (artist, title) => {
         const songBodyLyrics = spans.text() + '\n\n\n' + copyright.text();
         resolve(songBodyLyrics);
       }     
-      else reject(error);
+      else resolve();
     });
   }).catch(() => {
     console.log('Song page doesn\'t exist. Performing a search ...');
@@ -37,7 +52,6 @@ const getLyricsMusixmatch = async (artist, title) => {
     return(lyrics);
   }
   else return(null);
-
 };
 
 // Returns list of the relevant songs
@@ -47,20 +61,20 @@ const searchSongMusixmatch = async (artist='', title='') => {
   if(artist != '' && title != '') { // Common search 'artist - title'
     url = url 
       + 'search/'
-      + encodeURI(artist.toLowerCase().trim().replace(/ /g, '%20') + '%20')
-      + encodeURI(title.toLowerCase().trim().replace(/ /g, '%20')) + '/tracks';
+      + encodeURI(artist.toLowerCase().trim().replace(/[^a-zA-Zа-яА-Я0-9 ]/g, ' ')).replace(/\s+/g, '%20') + '%20'
+      + encodeURI(title.toLowerCase().trim().replace(/[^a-zA-Zа-яА-Я0-9 ]/g, ' ')).replace(/\s+/g, '%20') + '/tracks';
     console.log(url);
   }
   else if(artist == '') { // Search by song title
     url = url
       + 'search/'
-      + encodeURI(title.toLowerCase().trim().replace(/ /g, '%20')) + '/tracks';
+      + encodeURI(title.toLowerCase().trim().replace(/[^a-zA-Zа-яА-Я0-9 ]/g, ' ')).replace(/\s+/g, '%20') + '/tracks';
     console.log(url);
   }
   else if(title == '') { // Find top artists songs
     url = url
       + 'artist/' 
-      + encodeURI(artist.toLowerCase().trim().replace(/ /g, '-'));
+      + encodeURI(artist.toLowerCase().trim().replace(/[^a-zA-Zа-яА-Я0-9 ]/g, ' ').replace(/\s+/g, '-'));
     console.log(url);
   }
   else return(null);
@@ -69,15 +83,23 @@ const searchSongMusixmatch = async (artist='', title='') => {
     request(url, (error, response, html) => {
       if(!error && response.statusCode == 200){
         const $ = cherio.load(html);
-        let results = [];
-        $('.track-card').each((i, el) => {
-          const artist = $(el).find('.title').text();
-          const title = $(el).find('.artist').text();
-          results.push(artist + ' - ' + title);
+        let fullSongName = [];
+        let songLinks = [];
+        $('.track-card').each((i, trackCardEl) => {
+          let artists = '';
+          $(trackCardEl).find('.artist').each((j, artistEl) => {
+            artists += $(artistEl).text() + ', ';
+          });
+          artists = artists.slice(0, -2);
+          const title = $(trackCardEl).find('.title').text();
+          const link = $(trackCardEl).find('.title').attr('href');
+          fullSongName.push(artists + ' - ' + title);
+          songLinks.push(link);
         });
-        resolve(results);
+        const result = [fullSongName, songLinks];
+        resolve(result);
       }     
-      else reject(error);
+      else resolve();
     });
   }).catch(() => {
     console.log('searchSongMusixmatch: Nothing was found.');
